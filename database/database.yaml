@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: database
+  name: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      containers:
+        - image: 401413892014.dkr.ecr.us-east-1.amazonaws.com/reviews-database:latest
+          name: database
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root_password
+            - name: MYSQL_DATABASE
+              value: reviews-db
+            - name: MYSQL_USER
+              value: admin
+            - name: MYSQL_PASSWORD
+              value: user_password
