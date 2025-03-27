@@ -4,8 +4,11 @@ metadata:
   name: database-secret
   namespace: default
 data:
-  MYSQL_ROOT_PASSWORD: cm9vdF9wYXNzd29yZAo= # root_password
-  MYSQL_PASSWORD: dXNlcl9wYXNzd29yZAo= # user_password
+  MYSQL_ROOT_PASSWORD: cm9vdF9wYXNzd29yZA== # root_password
+  MYSQL_PASSWORD: dXNlcl9wYXNzd29yZA== # user_password
+  MYSQL_DATABASE: cmV2aWV3c19kYg== # reviews_db
+  MYSQL_USER: YWRtaW4= # admin
+
 type: Opaque
 
 ---
@@ -20,7 +23,6 @@ spec:
   selector:
     matchLabels:
       app: database
-  strategy: {}
   template:
     metadata:
       labels:
@@ -33,9 +35,15 @@ spec:
             - containerPort: 3306
           env:
             - name: MYSQL_DATABASE
-              value: reviews-db
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_DATABASE
             - name: MYSQL_USER
-              value: admin
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_USER
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -46,3 +54,18 @@ spec:
                 secretKeyRef:
                   name: database-secret
                   key: MYSQL_PASSWORD
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: database-service
+  name: database-service
+spec:
+  ports:
+    - name: "3306"
+      port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    app: database
