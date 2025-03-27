@@ -1,3 +1,14 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: database-secret
+  namespace: default
+data:
+  MYSQL_ROOT_PASSWORD: cm9vdF9wYXNzd29yZAo= # root_password
+  MYSQL_PASSWORD: dXNlcl9wYXNzd29yZAo= # user_password
+type: Opaque
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,11 +32,17 @@ spec:
           ports:
             - containerPort: 3306
           env:
-            - name: MYSQL_ROOT_PASSWORD
-              value: root_password
             - name: MYSQL_DATABASE
               value: reviews-db
             - name: MYSQL_USER
               value: admin
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_ROOT_PASSWORD
             - name: MYSQL_PASSWORD
-              value: user_password
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_PASSWORD
