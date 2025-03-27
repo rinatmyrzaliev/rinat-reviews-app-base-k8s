@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: database-secret
+  namespace: default
+data:
+  MYSQL_ROOT_PASSWORD: cm9vdF9wYXNzd29yZA== # root_password
+  MYSQL_PASSWORD: dXNlcl9wYXNzd29yZA== # user_password
+  MYSQL_DATABASE: cmV2aWV3c19kYg== # reviews_db
+  MYSQL_USER: YWRtaW4= # admin
+type: Opaque
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mysql-gp2
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+  fsType: ext4
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: database-statefulset
+  name: database-statefulset
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database-statefulset
+  template:
+    metadata:
+      labels:
+        app: database-statefulset
+    spec:
+      containers:
+        - image: 401413892014.dkr.ecr.us-east-1.amazonaws.com/reviews-database:latest
+          name: database-statefulset
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_DATABASE
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_USER
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_PASSWORD
+          volumeMounts: # mounts the volume that created below to the container
+            - name: database-persistent-storage # specify the name of the volume - it needs to match the name of the volume
+              mountPath: /var/lib/mysql # specific path inside of the container filesystem where the volume will be mounted
+  volumeClaimTemplates: # this automatically created pvc and pv and ebs volume
+    - metadata:
+        name: database-persistent-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: mysql-gp2
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: database-service
+  name: database-service
+spec:
+  ports:
+    - name: "3306"
+      port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    app: database-statefulset

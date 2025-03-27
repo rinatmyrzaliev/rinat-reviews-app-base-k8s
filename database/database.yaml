@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: database-secret
+  namespace: default
+data:
+  MYSQL_ROOT_PASSWORD: cm9vdF9wYXNzd29yZA== # root_password
+  MYSQL_PASSWORD: dXNlcl9wYXNzd29yZA== # user_password
+  MYSQL_DATABASE: cmV2aWV3c19kYg== # reviews_db
+  MYSQL_USER: YWRtaW4= # admin
+
+type: Opaque
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: database
+  name: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      containers:
+        - image: 401413892014.dkr.ecr.us-east-1.amazonaws.com/reviews-database:latest
+          name: database
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_DATABASE
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_USER
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: MYSQL_PASSWORD
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: database-service
+  name: database-service
+spec:
+  ports:
+    - name: "3306"
+      port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    app: database
