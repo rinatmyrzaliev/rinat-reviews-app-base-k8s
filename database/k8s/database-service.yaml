@@ -9,5 +9,5 @@ spec:
     protocol: TCP
     targetPort: 3306
   selector:
-    app: database-deployment
+    app: database-statefulset
   type: ClusterIP

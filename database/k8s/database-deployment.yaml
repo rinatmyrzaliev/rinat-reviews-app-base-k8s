@@ -1,22 +1,80 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Secret
 metadata:
-  name: database-deployment
+  name: database-secret
+  namespace: default
+data:
+  MYSQL_ROOT_PASSWORD: cm9vdDEyMzQ= # root1234
+  MYSQL_PASSWORD: YWRtaW4xMjM0 # admin1234
+  MYSQL_DATABASE: cmV2aWV3cy1kYg== # reviews-db
+  MYSQL_USER: YWRtaW4= # admin
+type: Opaque
+
+---
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mysql-gp2
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+  fsType: ext4
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: database-statefulset
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: database-deployment
+      app: database-statefulset
   template:
     metadata:
       labels:
-        app: database-deployment
+        app: database-statefulset
     spec:
       containers:
-      - image: mysql
-        name: mysql
-        ports:
-        - containerPort: 3306
+      - image: 517121893325.dkr.ecr.us-east-1.amazonaws.com/database:1.1 #Replace with your own URI
+        name: database
         env:
         - name: MYSQL_ROOT_PASSWORD
-          value: hardtotrack111
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: MYSQL_ROOT_PASSWORD
+
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: MYSQL_DATABASE
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: MYSQL_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: MYSQL_PASSWORD
+        volumeMounts:
+        - name: database-persistent-storage
+          mountPath: /var/lib/mysql      
+        ports:
+        - containerPort: 3306
+  volumeClaimTemplates:
+  - metadata:
+      name: database-persistent-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: mysql-gp2
+      resources:
+        requests:
+          storage: 1Gi
